@@ -1,0 +1,24 @@
+# TLA+/TLAPS working files
+.tlacache/
+*.tlaps/
+*.thy
+fingerprints
+
+# TLC working files
+states/
+*.DS_Store
+
+# Dafny working files
+.dafny/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Runtime logs from ad-hoc runs (results/ is tracked separately)
+*.pid
+run_*.log
+
+# OS
+Thumbs.db

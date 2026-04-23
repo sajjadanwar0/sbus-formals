@@ -1,0 +1,29 @@
+(* created new ".tlacache/FiniteSets.tlaps/FiniteSets.thy" *)
+(* fingerprints written in ".tlacache/FiniteSets.tlaps/fingerprints" *)
+File "/usr/local/lib/tlaps/FiniteSets.tla", line 1, character 1 to line 23, character 77:
+[INFO]: All 0 obligation proved.
+(* created new ".tlacache/Functions.tlaps/Functions.thy" *)
+(* fingerprints written in ".tlacache/Functions.tlaps/fingerprints" *)
+File "/usr/local/lib/tlaps/Functions.tla", line 1, character 1 to line 63, character 77:
+[INFO]: All 0 obligation proved.
+(* created new ".tlacache/FunctionTheorems.tlaps/FunctionTheorems.thy" *)
+(* fingerprints written in ".tlacache/FunctionTheorems.tlaps/fingerprints" *)
+File "/usr/local/lib/tlaps/FunctionTheorems.tla", line 1, character 1 to line 531, character 77:
+[INFO]: All 0 obligation proved.
+(* created new ".tlacache/NaturalsInduction.tlaps/NaturalsInduction.thy" *)
+(* fingerprints written in ".tlacache/NaturalsInduction.tlaps/fingerprints" *)
+File "/usr/local/lib/tlaps/NaturalsInduction.tla", line 1, character 1 to line 151, character 77:
+[INFO]: All 0 obligation proved.
+(* created new ".tlacache/TLAPS.tlaps/TLAPS.thy" *)
+(* fingerprints written in ".tlacache/TLAPS.tlaps/fingerprints" *)
+File "/usr/local/lib/tlaps/TLAPS.tla", line 1, character 1 to line 362, character 77:
+[INFO]: All 0 obligation proved.
+(* created new ".tlacache/SequenceTheorems.tlaps/SequenceTheorems.thy" *)
+(* fingerprints written in ".tlacache/SequenceTheorems.tlaps/fingerprints" *)
+File "/usr/local/lib/tlaps/SequenceTheorems.tla", line 1, character 1 to line 263, character 77:
+[INFO]: All 0 obligation proved.
+(* loading fingerprints in ".tlacache/SBus_TLAPS_v16.tlaps/fingerprints" *)
+(* created new ".tlacache/SBus_TLAPS_v16.tlaps/SBus_TLAPS_v16.thy" *)
+(* fingerprints written in ".tlacache/SBus_TLAPS_v16.tlaps/fingerprints" *)
+File "./SBus_TLAPS_v16.tla", line 1, character 1 to line 1086, character 4:
+[INFO]: All 687 obligations proved.

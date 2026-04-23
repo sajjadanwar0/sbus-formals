@@ -1,0 +1,44 @@
+fd3988f
+
+Starting Sun 19 Apr 11:29:40 PKT 2026
+Spec: SBus_TLAPS_v18.tla
+
+────────────────────────────────────────────────────────────────────
+ Pass: baseline  (methods=smt,zenon,auto, stretch=1)
+────────────────────────────────────────────────────────────────────
+Pass baseline: rc=3, runtime=135s
+[ERROR]: 12/702 obligations failed.
+
+────────────────────────────────────────────────────────────────────
+ Pass: isa_auto_long  (methods=auto, stretch=10)
+────────────────────────────────────────────────────────────────────
+Pass isa_auto_long: rc=3, runtime=774s
+[ERROR]: 22/702 obligations failed.
+
+────────────────────────────────────────────────────────────────────
+ Pass: isa_blast  (methods=blast, stretch=10)
+────────────────────────────────────────────────────────────────────
+Pass isa_blast: rc=3, runtime=203s
+[ERROR]: 22/702 obligations failed.
+
+────────────────────────────────────────────────────────────────────
+ Pass: isa_blast_xlong  (methods=blast, stretch=30)
+────────────────────────────────────────────────────────────────────
+Pass isa_blast_xlong: rc=0, runtime=1s
+[ERROR]: 22/702 obligations failed.
+
+────────────────────────────────────────────────────────────────────
+ Pass: isa_force  (methods=force, stretch=10)
+────────────────────────────────────────────────────────────────────
+Pass isa_force: rc=255, runtime=0s
+[ERROR]: 22/702 obligations failed.
+
+────────────────────────────────────────────────────────────────────
+ Pass: isa_force_xlong  (methods=force, stretch=30)
+────────────────────────────────────────────────────────────────────
+Pass isa_force_xlong: rc=0, runtime=1s
+[ERROR]: 22/702 obligations failed.
+
+────────────────────────────────────────────────────────────────────
+ Pass: isa_all  (methods=auto,blast,force, stretch=10)
+────────────────────────────────────────────────────────────────────

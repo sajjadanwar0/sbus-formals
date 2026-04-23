@@ -1,0 +1,25 @@
+{
+  "start": "2026-04-18T09:20:28Z"
+,  "end": "2026-04-18T09:24:19Z"
+,  "dafny_status": "pass"
+,  "dafny_verified": 19
+,  "dafny_errors": 0
+,  "tlapm_status": "pass"
+,  "tlapm_proved": 687
+,  "tlapm_failed": 0
+,  "tlc_n3_status": "pass"
+,  "tlc_n3_distinct": 20763484
+,  "tlc_n3_generated": 130942110
+,  "tlc_n3_depth": 28
+,  "tlc_n3_violations": 0
+,  "tlc_n4_reduced_status": "pass"
+,  "tlc_n4_reduced_distinct": 2811301
+,  "tlc_n4_reduced_generated": 21961972
+,  "tlc_n4_reduced_depth": 24
+,  "tlc_n4_reduced_violations": 0
+,  "tlc_n4_full_status": "running"
+,  "tlc_n4_full_distinct": "null"
+,  "tlc_n4_full_generated": "null"
+,  "tlc_n4_full_depth": "null"
+,  "tlc_n4_full_violations": "null"
+}
