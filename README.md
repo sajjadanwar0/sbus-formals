@@ -1,16 +1,16 @@
 # sbus-formals
 
-**TLA+, TLAPS, and Dafny formal-verification artefacts for the S-Bus paper.**
+**TLA+, TLAPS, and Dafny formal-verification artifacts for the S-Bus paper.**
 
-Paper: *S-Bus v50.2: Observable-Read Consistency for Concurrent Multi-Agent
+Paper: *S-Bus: Observable-Read Consistency for Concurrent Multi-Agent
 LLM State* (arXiv, 2026).
 
-This repository contains the mechanised-verification evidence for the
+This repository contains the mechanized-verification evidence for the
 paper's §III–§V safety claims across three tools:
 
 - **TLC** (model checking) — bounded exhaustive verification of the ORI
   invariant at N ≤ 4
-- **TLAPS** (theorem proving) — mechanised proof of the single-node ORI
+- **TLAPS** (theorem proving) — mechanized proof of the single-node ORI
   safety for arbitrary agent count
 - **Dafny 4** — 19 machine-checked inductive soundness lemmas
 
@@ -263,8 +263,3 @@ From the paper's §V and §X:
 ## License
 
 MIT. See `LICENSE`.
-
-## Contact
-
-Sajjad Khan — sajjadanwar0@gmail.com
-# sbus-formals
