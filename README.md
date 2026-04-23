@@ -242,7 +242,7 @@ From the paper's §V and §X:
    `historical/` for ongoing work to discharge it.
 
 4. **Two parameter ASSUMEs** (`NoOwnerNotAgent`, `EmptyContentIsString`) —
-   standard TLA+ parameterisation, not mathematical axioms.
+   standard TLA+ parameterization, not mathematical axioms.
 
 ---
 
@@ -253,7 +253,6 @@ From the paper's §V and §X:
   author      = {Khan, Sajjad},
   title       = {Observable-Read Consistency for Concurrent Multi-Agent
                  LLM State},
-  institution = {Independent},
   year        = {2026},
   note        = {arXiv preprint. Version 50.2.},
   url         = {https://arxiv.org/abs/...}
