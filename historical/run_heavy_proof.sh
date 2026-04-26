@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# run_heavy_proof_v3.sh — Verified-syntax heavy sweep for tlapm 1.6.0-pre.
+# run_heavy_proof.sh — Verified-syntax heavy sweep for tlapm 1.6.0-pre.
 #
 # Uses ONLY method identifiers confirmed to exist in your installation:
 #   zenon, auto, blast, force, smt, z3, cvc4, yices, verit, spass,
 #   zipper, ls4
 #
-# Key additions over v1/v2:
+# Key prover features used:
 #   - `force` and `blast` — Isabelle tactics specifically strong on function
 #     extensionality (what FunTypingReconstruction needs)
 #   - `spass` and `zipper` — higher-order provers; zipper especially
@@ -14,16 +14,16 @@
 #
 # Usage:
 #   cd /path/to/phase1
-#   chmod +x run_heavy_proof_v3.sh
-#   ./run_heavy_proof_v3.sh SBus_TLAPS_v17.tla
+#   chmod +x run_heavy_proof.sh
+#   ./run_heavy_proof.sh SBus_TLAPS_attempt_a.tla
 #
 # Runtime: 20-60 min.
 
 set -uo pipefail
 
-SPEC="${1:-SBus_TLAPS_v17.tla}"
+SPEC="${1:-SBus_TLAPS_attempt_a.tla}"
 if [[ ! -f "$SPEC" ]]; then
-  for fallback in SBus_TLAPS_v18.tla SBus_TLAPS_v16.tla; do
+  for fallback in SBus_TLAPS_attempt_b.tla SBus_TLAPS.tla; do
     if [[ -f "$fallback" ]]; then
       SPEC="$fallback"
       echo "[info] Using $SPEC"
@@ -37,8 +37,8 @@ if [[ ! -f "$SPEC" ]]; then
 fi
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-LOG="tlapm_heavy_v3_${TIMESTAMP}.log"
-SUMMARY="tlapm_heavy_v3_summary_${TIMESTAMP}.txt"
+LOG="tlapm_heavy_${TIMESTAMP}.log"
+SUMMARY="tlapm_heavy_summary_${TIMESTAMP}.txt"
 THREADS="${THREADS:-4}"
 
 echo "===================================================================="

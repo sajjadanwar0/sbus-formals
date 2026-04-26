@@ -1,20 +1,16 @@
-// sbus_lemmas_v4.dfy — S-Bus v47+ Formal Verification
+// sbus_lemmas.dfy — S-Bus formal verification (Dafny inductive lemmas)
 //
-// FIX from v3: the v3 file had 9 resolution errors of the form
-//   "type of the receiver is not fully determined at this program point"
-// at every `dlog'[aa][i].k` and `dlog'[aa][i].v` reference. The cause is
-// that inside an `ensures forall i: int | ... :: dlog'[aa][i].k ...` clause,
-// Dafny cannot trigger destructor resolution on the indexer expression
-// because the bound variable `i` plus the map-then-seq indexer chain
-// produces a type the resolver leaves underconstrained until proof time.
-//
-// FIX: write `var entry: DLogEntry := dlog'[aa][i]; entry.k ...` instead.
-// The explicit annotation `: DLogEntry` resolves the receiver type at
-// resolution time, and the proofs work identically.
+// Implementation note: inside `ensures forall i: int | ... :: dlog'[aa][i].k ...`
+// clauses, Dafny cannot trigger destructor resolution on the indexer expression
+// because the bound variable `i` plus the map-then-seq indexer chain produces
+// a type the resolver leaves underconstrained until proof time. The fix is
+// to write `var entry: DLogEntry := dlog'[aa][i]; entry.k ...` instead — the
+// explicit annotation `: DLogEntry` resolves the receiver type at resolution
+// time, and the proofs work identically.
 //
 // Verification:
-//   dafny verify sbus_lemmas_v4.dfy
-// Expected: "Dafny program verifier finished with 9 verified, 0 errors"
+//   dafny verify sbus_lemmas.dfy
+// Expected: "Dafny program verifier finished with 19 verified, 0 errors"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type AgentId = string

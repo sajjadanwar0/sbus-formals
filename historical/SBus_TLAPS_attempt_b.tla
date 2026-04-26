@@ -1,6 +1,6 @@
----- MODULE SBus_TLAPS_v17 ----
+---- MODULE SBus_TLAPS_attempt_b ----
 EXTENDS Naturals, Sequences, FiniteSets, TLAPS,
-        FunctionTheorems, SequenceTheorems, Functions
+        FunctionTheorems, SequenceTheorems
 
 CONSTANT Agents
 CONSTANT Shards
@@ -203,17 +203,30 @@ THEOREM SeqIndexTyping ==
  *    invite TLAPS experts to contribute a closing tactic during
  *    artifact review."
  *)
-(* v17 attempt — fourth discharge strategy: Functions.Restrict.
+(* v18 attempt — fifth discharge attempt.
  *
- * Key idea: Restrict(f, S) is a standard library operator defined
- * as [x \in S |-> f[x]]. If tlapm can unfold Restrict (it's defined
- * in /usr/local/lib/tlaps/Functions.tla, now in EXTENDS above), then
- * the extensionality step may close where inline lambda did not.
+ * Prior attempts:
+ *   v13: BY Isa
+ *   v14: Manual [x \in S |-> f[x]] + extensionality
+ *   v15: Pointwise + Zenon
+ *   v17: Functions.Restrict(f,S)
  *
- * Historical note: this attempt failed in practice with the same
- * "Zenon_1 cannot prove f = Restrict(f, S)" error as v15. The v18
- * automation kit also tries this approach so it's recorded here for
- * the heavy-backend sweep.
+ * New v18 strategy: TLAPS has a less-known tactic, `PTL`, plus the
+ * ability to SUFFICES through ZFC set-theoretic reasoning. We also try
+ * the new `ExpandENABLED` / `AutoUSE` sequence.
+ *
+ * Key observation: in TLA+ set-theoretic semantics,
+ *     f \in [S -> T] == IsAFcn(f) /\ DOMAIN f = S /\ \A x \in S : f[x] \in T
+ * So the reconstruction is just a matter of unfolding [S -> T]'s
+ * definitional equivalence. The question is whether any TLAPS backend
+ * knows this unfolding.
+ *
+ * This v18 attempt tries Isabelle with explicit obligation about
+ * IsAFcn, which is the function-recognizer predicate.  If Isabelle
+ * can close "IsAFcn(f) /\ ... => f \in [S -> T]", then combined with
+ * "DOMAIN f = S => IsAFcn(f)" (definitionally true), we're done.
+ *
+ * If this fails too, we stop and retain the AXIOM for v16.
  *)
 THEOREM FunTypingReconstruction ==
   \A S, T, f :
@@ -223,24 +236,24 @@ THEOREM FunTypingReconstruction ==
                      \A x \in S : f[x] \in T
                PROVE  f \in [S -> T]
   OBVIOUS
-<1>2. Restrict(f, S) = [x \in S |-> f[x]]
-  BY DEF Restrict
-<1>3. [x \in S |-> f[x]] \in [S -> T]
+<1>2. [x \in S |-> f[x]] \in [S -> T]
   BY <1>1
-<1>4. Restrict(f, S) \in [S -> T]
+<1>3. f = [x \in S |-> f[x]]
+  (* ZFC extensionality: same domain + same values => equal functions.
+   * Try isabelle with auto + fun_equalityI lemma invocation. *)
+  <2>1. DOMAIN [x \in S |-> f[x]] = S
+    OBVIOUS
+  <2>2. DOMAIN f = DOMAIN [x \in S |-> f[x]]
+    BY <1>1, <2>1
+  <2>3. \A x \in DOMAIN f : f[x] = [x \in S |-> f[x]][x]
+    BY <1>1
+  <2> QED
+    (* v18 (updated): removed explicit Isa hint so --method flag routes
+     * to force/blast/zipper as requested. Isa defaults to auto which
+     * may be weaker than force for function-equality goals. *)
+    BY <2>2, <2>3
+<1>4. QED
   BY <1>2, <1>3
-<1>5. \A x \in S : f[x] = Restrict(f, S)[x]
-  BY <1>2
-<1>6. DOMAIN Restrict(f, S) = S
-  BY <1>2
-<1>7. f = Restrict(f, S)
-  (* v17 removed explicit Zenon hint so the --method CLI flag can route
-   * this to force/blast/zipper/smt as appropriate. Previously said
-   * "BY <1>1, <1>5, <1>6, Zenon" which forced Zenon even when other
-   * backends were requested on the command line. *)
-  BY <1>1, <1>5, <1>6
-<1>8. QED
-  BY <1>4, <1>7
 
 VARIABLE registry
 VARIABLE tokens

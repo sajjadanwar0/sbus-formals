@@ -2,8 +2,8 @@
 # run_formal.sh — Close all S-Bus formal-verification gaps in one invocation.
 #
 # Runs (in order):
-#   1. Dafny verification of proofs/sbus_lemmas_v4.dfy     (~30s)
-#   2. tlapm mechanisation of proofs/SBus_TLAPS_v16.tla    (~5-15min)
+#   1. Dafny verification of proofs/sbus_lemmas.dfy     (~30s)
+#   2. tlapm mechanisation of proofs/SBus_TLAPS.tla    (~5-15min)
 #   3. TLC at N=3                                   (~10s)
 #   4. TLC at N=4 reduced                           (~10s)
 #   5. TLC at N=4 full                              (~1h18min on 16-worker,
@@ -257,17 +257,17 @@ fi
 # ── 1. Dafny verification ─────────────────────────────────────────────────────
 
 run_dafny() {
-  log "STEP 1/5: Dafny verification of proofs/sbus_lemmas_v4.dfy"
+  log "STEP 1/5: Dafny verification of proofs/sbus_lemmas.dfy"
   if ! require_tool "$DAFNY" DAFNY; then
     J[dafny_status]="tool_missing"
     return
   fi
-  if [[ ! -f proofs/sbus_lemmas_v4.dfy ]]; then
-    fail "proofs/sbus_lemmas_v4.dfy not in current dir"
+  if [[ ! -f proofs/sbus_lemmas.dfy ]]; then
+    fail "proofs/sbus_lemmas.dfy not in current dir"
     J[dafny_status]="file_missing"
     return
   fi
-  "$DAFNY" verify proofs/sbus_lemmas_v4.dfy > results/dafny.log 2>&1
+  "$DAFNY" verify proofs/sbus_lemmas.dfy > results/dafny.log 2>&1
   rc=$?
   # Dafny's success line:
   # "Dafny program verifier finished with N verified, 0 errors"
@@ -290,20 +290,20 @@ run_dafny() {
 # ── 2. tlapm mechanisation ────────────────────────────────────────────────────
 
 run_tlapm() {
-  log "STEP 2/5: tlapm proof of proofs/SBus_TLAPS_v16.tla"
+  log "STEP 2/5: tlapm proof of proofs/SBus_TLAPS.tla"
   if ! require_tool "$TLAPM" TLAPM; then
     J[tlapm_status]="tool_missing"
     return
   fi
-  if [[ ! -f proofs/SBus_TLAPS_v16.tla ]]; then
-    fail "proofs/SBus_TLAPS_v16.tla not in current dir"
+  if [[ ! -f proofs/SBus_TLAPS.tla ]]; then
+    fail "proofs/SBus_TLAPS.tla not in current dir"
     J[tlapm_status]="file_missing"
     return
   fi
   if [[ -d "$TLAPS_LIB" ]]; then
-    "$TLAPM" -I "$TLAPS_LIB" proofs/SBus_TLAPS_v16.tla > results/tlapm.log 2>&1
+    "$TLAPM" -I "$TLAPS_LIB" proofs/SBus_TLAPS.tla > results/tlapm.log 2>&1
   else
-    "$TLAPM" proofs/SBus_TLAPS_v16.tla > results/tlapm.log 2>&1
+    "$TLAPM" proofs/SBus_TLAPS.tla > results/tlapm.log 2>&1
   fi
   rc=$?
   # tlapm emits one of two summary patterns:

@@ -1,7 +1,7 @@
 fd3988f
 
 Starting Sun 19 Apr 11:29:40 PKT 2026
-Spec: SBus_TLAPS_v18.tla
+Spec: SBus_TLAPS_attempt_b.tla
 
 ────────────────────────────────────────────────────────────────────
  Pass: baseline  (methods=smt,zenon,auto, stretch=1)

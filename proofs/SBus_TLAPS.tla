@@ -1,4 +1,4 @@
----- MODULE SBus_TLAPS_v16 ----
+---- MODULE SBus_TLAPS ----
 EXTENDS Naturals, Sequences, FiniteSets, TLAPS,
         FunctionTheorems, SequenceTheorems
 
