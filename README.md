@@ -281,7 +281,3 @@ From the paper's §V and §VIII:
 ## License
 
 MIT. See `LICENSE`.
-
-## Contact
-
-Sajjad Khan — sajjadnawar200@gmail.com — [github.com/sajjadanwar0](https://github.com/sajjadanwar0)
