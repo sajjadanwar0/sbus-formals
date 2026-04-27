@@ -8,150 +8,20 @@ CONSTANT NoOwner
 
 ASSUME NoOwnerNotAgent == NoOwner \notin Agents
 
-(* EmptyContent is the initial shard content — any element of STRING.
- *
- * We declare it as a CONSTANT with a type ASSUME, NOT as a
- * mathematical axiom.  This is the standard TLA+ pattern for
- * parameterising a specification over an unspecified value of a
- * known type.  It is in the same category as "NoOwner is not an
- * Agent": a parameter assumption, not a proof-engineering
- * shortcut.
- *
- * The reviewer critique about "admitted axioms" specifically
- * targeted sequence/function typing facts that should be
- * discharged from the TLAPS standard library (which v12 now
- * does via SequenceTheorems.SeqDef and SequenceTheorems.ElementOfSeq).
- * A parameter type assumption on a CONSTANT is not in the same
- * class and is standard TLA+ practice (see, e.g., any TLA+
- * specification with `ASSUME Constant \in TypeDomain`).
- *)
 CONSTANT EmptyContent
 ASSUME EmptyContentIsString == EmptyContent \in STRING
 
-(* --- Standard TLA+ library facts: status in v12 ---
-
- * v10 admitted three of these as AXIOMs.  v11 attempted to discharge
- * them via guessed library theorem names.  v12 uses the actual
- * theorem names from the user's installed FunctionTheorems.tla /
- * SequenceTheorems.tla (discovered by grep):
- *
- *   SeqDefinition     — discharged via SequenceTheorems.SeqDef (exact match)
- *   SeqIndexTyping    — discharged via SequenceTheorems.ElementOfSeq
- *   FunTypingReconstruction — NOT in the user's FunctionTheorems.tla,
- *     which only covers bijections, injections, surjections, and
- *     Cantor-Bernstein.  Retained as AXIOM with honest scope note:
- *     this is a primitive TLA+ set-theoretic fact, not "admitted
- *     because the backend couldn't prove it" but "admitted because
- *     it IS an axiom of TLA+'s function theory."  The reviewer
- *     critique "Verdi's axioms were about unmodeled components" is
- *     correct for the first two axioms (which are now discharged)
- *     but does not apply to this third one, which is a foundational
- *     fact about the construction of typed function spaces in
- *     TLA+.  If a future version of FunctionTheorems.tla exposes
- *     this lemma (e.g., Fun_IsAFcn or equivalent), we can discharge
- *     it then.
- *)
-
-(* LIB1 (DISCHARGED v12): Sequence unfolding.
- * Exact match with SequenceTheorems.SeqDef.
- *)
 THEOREM SeqDefinition ==
   \A T : Seq(T) = UNION {[1..n -> T] : n \in Nat}
   BY SeqDef
 
-(* LIB2 (DISCHARGED v12): Sequence indexing typing.
- * Follows from SequenceTheorems.ElementOfSeq.
- *)
+
 THEOREM SeqIndexTyping ==
   \A T, s, i :
     (s \in Seq(T) /\ i \in 1..Len(s)) => s[i] \in T
   BY ElementOfSeq
 
-(* AX1 (RETAINED v12, with honest scope):
- * Function-typing reconstruction.
- * If f has domain S and every f[x] is in T, then f \in [S -> T].
- *
- * This is a PRIMITIVE fact about TLA+'s function theory — it is
- * how TLA+ defines [S -> T].  It is not in FunctionTheorems.tla
- * (which covers bijections/surjections/injections).  We retain it
- * as an AXIOM because it is axiomatic in the model-theoretic sense,
- * not because the backend could not prove it.
- *
- * Equivalent phrasing: this is the membership direction of the
- * extensionality axiom for function spaces.
- *)
-(* (v13) Attempted discharge of FunTypingReconstruction.
- *
- * The PaPoC-round reviewer (3rd-party) correctly pointed out that
- * this fact is true by definition in untyped TLA+'s semantics:
- * [S -> T] is the set of all functions f with DOMAIN f = S such
- * that f[x] \in T for all x \in S.  The fact that the default
- * Zenon backend didn't auto-discharge it indicates we need stronger
- * hints, not that it is genuinely axiomatic.
- *
- * v13 attempts discharge via the Isabelle backend with an explicit
- * ZFC-style proof unfolding the definition of [S -> T].  If this
- * fails on your Lightsail tlapm installation, the fallback
- * candidates (in order of preference) are:
- *
- *   (i)  BY Isa DEF                    — force Isabelle backend
- *   (ii) BY SMT                        — use the SMT backend
- *   (iii) BY SMTT(60)                   — give SMT more time
- *   (iv) Explicit proof via SUFFICES-ASSUME-PROVE and TLAPS
- *        AxiomOfExtensionality / SetExtensionality from Functions.tla
- *   (v)  Genuine AXIOM retention with explicit documentation
- *
- * If all five approaches fail, retention is documented honestly as
- * "failed to discharge via available backends"; the v13 failure log
- * will tell us which approach works.
- *)
-(* ──────────────────────────────────────────────────────────────────────
- * FunTypingReconstruction — RETAINED AS DOCUMENTED AXIOM (v16)
- * ──────────────────────────────────────────────────────────────────────
- *
- * This fact — "if DOMAIN f = S and every f[x] is in T, then f is in
- * [S -> T]" — is provable in principle from function extensionality,
- * but we have not been able to discharge it via tlapm's available
- * backends on the TLAPS installation at /usr/local/lib/tlaps/.
- *
- * DISCHARGE ATTEMPTS (all documented, all failed):
- *
- *   v13: BY Isa
- *        Result: Isabelle backend did not close the proof.
- *
- *   v14: Manual two-step — [x \in S |-> f[x]] \in [S -> T] followed by
- *        f = [x \in S |-> f[x]] as a single step.
- *        Result: second step (function extensionality) failed.
- *
- *   v15: Manual four-step pointwise decomposition:
- *          - equal domains,
- *          - pointwise equality \A x \in DOMAIN f : f[x] = ..[x],
- *          - conclude f = [x \in S |-> f[x]] via Zenon.
- *        Result: Zenon could not close the extensionality conclusion
- *        from its hypotheses in the available backend time budget.
- *
- * We retain this as an AXIOM rather than burn more iterations.  This
- * is materially a stronger position than v10 (which admitted 3
- * sequence-theoretic axioms as proof-engineering shortcuts — all
- * three now discharged via SequenceTheorems.{SeqDef,ElementOfSeq}).
- *
- * Honest scope for paper:
- *
- *   "v16 proves ReadSetSoundness, CommittedHistoriesAreORILegalInvariant
- *    (as a state invariant over reachable traces, not merely as an
- *    action precondition), and related lemmas via 704 tlapm obligations
- *    mechanically discharged and 1 documented axiom retained.  The
- *    retained axiom is a statement of TLA+ function extensionality
- *    (equivalent to: a function equals its λ-abstraction); its
- *    mechanical discharge failed across three backend configurations
- *    (Isabelle, pointwise+SMT, pointwise+Zenon).  This is a tlapm
- *    tooling limit, comparable in kind to Verdi's admitted network
- *    semantics facts."
- *
- * A reviewer sufficiently skilled in TLAPS internals might still close
- * this via SMT with specific flag combinations; we invite such
- * contributions in artifact review.
- *)
+
 AXIOM FunTypingReconstruction ==
   \A S, T, f :
     (DOMAIN f = S /\ \A x \in S : f[x] \in T) => f \in [S -> T]
@@ -167,14 +37,6 @@ RegistryTI == registry \in [Shards -> [version: Nat, content: STRING]]
 TokensTI   == tokens   \in [Shards -> Agents \cup {NoOwner}]
 DLogTI     == delivery_log \in [Agents -> Seq([k: Shards, v: Nat])]
 
-(* ──────────────────────────────────────────────────────────────────────
-   Committed-history type.  Each entry is a complete record of a
-   successful Commit: which agent, which shard, the new version, and
-   the read-set that was validated at commit time.  Crucially, the
-   read-set is stored AS IT WAS AT COMMIT TIME — this makes the
-   ORI-legality invariant a pure trace property that needs no appeal
-   to past states.
-   ────────────────────────────────────────────────────────────────────── *)
 CommittedHistoryEntry ==
   [agent: Agents, shard: Shards, version: Nat,
    read_set: Seq([k: Shards, v: Nat]),
@@ -195,23 +57,6 @@ ReadSetSoundness ==
     \A i \in 1..Len(delivery_log[a]) :
       delivery_log[a][i].v <= registry[delivery_log[a][i].k].version
 
-(* ──────────────────────────────────────────────────────────────────────
-   CommittedHistoriesAreORILegal (state invariant; Reviewer-requested).
-
-   For every entry in committed_history, the cross-shard snapshot
-   stored AT COMMIT TIME satisfies: for each recorded read (k', v')
-   with k' distinct from the entry's primary shard, the snapshot
-   records v' as equal to the registry version of k' AT THE COMMIT
-   MOMENT (stored in snapshot_v).  This is the Definition III.4(2)
-   property promoted from "action precondition" to "state invariant
-   quantifying over all completed commits" — the strengthening the
-   reviewer (PaPoC/3rd-party) asked for.
-
-   Because cross_shard_snapshot is captured AT COMMIT TIME as part
-   of the Commit action's effect on committed_history, the invariant
-   is a pure property of the trace of completed commits; no
-   reasoning about past registry states is needed.
-   ──────────────────────────────────────────────────────────────────── *)
 CommittedHistoriesAreORILegal ==
   \A i \in 1..Len(committed_history) :
     LET entry == committed_history[i]
@@ -222,16 +67,6 @@ CommittedHistoriesAreORILegal ==
              entry.read_set[j].k # entry.shard =>
                entry.read_set[j].v = entry.cross_shard_snapshot[j].snapshot_v
 
-(* ────────────────────────────────────────────────────────────────────
-   NoStaleCrossShard(a, primary): agent a's DeliveryLog has no stale
-   cross-shard entry relative to primary key primary.  Equivalently,
-   for every recorded read (k', v') with k' != primary, the current
-   registry version at k' equals v'.
-
-   This is the state-level predicate that captures Definition III.4(2)
-   (Cross-shard R_obs freshness) from the paper: at the moment of
-   Commit, no intervening write has occurred on any cross-shard key.
-   ──────────────────────────────────────────────────────────────────── *)
 NoStaleCrossShard(a, primary) ==
   \A i \in 1..Len(delivery_log[a]) :
     delivery_log[a][i].k # primary =>
@@ -251,10 +86,6 @@ Read(ag, sh) ==
                        [k |-> sh, v |-> registry[sh].version])]
   /\ UNCHANGED <<registry, tokens, committed_history>>
 
-(* Snapshot function used by Commit to record the cross-shard view
-   AT COMMIT TIME.  Because this is evaluated inside the Commit
-   action's precondition guard, the v values here are exactly the
-   versions that held when the cross-shard freshness check passed. *)
 SnapshotAtCommit(ag) ==
   [i \in 1..Len(delivery_log[ag]) |->
      [k |-> delivery_log[ag][i].k,
@@ -821,23 +652,6 @@ LEMMA CommitPreservesIND ==
 <1>25. ReadSetSoundness'
   BY <1>24 DEF ReadSetSoundness
 
-(* ────────────────────────────────────────────────────────────────────
-   CommittedHistoriesAreORILegal preservation under Commit.
-
-   The hard case.  Commit appends a new entry to committed_history.
-   We must show:
-   (a) Existing entries remain ORI-legal (their stored content is
-       unchanged; the invariant depends only on the stored snapshot,
-       not on current registry state, so it is preserved structurally).
-   (b) The new appended entry is ORI-legal by construction: its
-       cross_shard_snapshot is defined as
-         [j |-> [k |-> dlog[j].k,
-                 snapshot_v |-> registry[dlog[j].k].version]]
-       and the Commit precondition guarantees
-         registry[dlog[j].k].version = dlog[j].v
-       for every j with dlog[j].k # sh.  Therefore for cross-shard
-       indices j, read_set[j].v = snapshot_v[j].snapshot_v.
-   ──────────────────────────────────────────────────────────────── *)
 <1>25a. committed_history' =
           Append(committed_history,
             [agent |-> ag,
@@ -866,8 +680,7 @@ LEMMA CommitPreservesIND ==
                 [k |-> delivery_log[ag][j].k,
                  snapshot_v |-> registry[delivery_log[ag][j].k].version]]]
   BY <1>25a
-<1>25f. (* The Commit precondition: for cross-shard indices,
-           registry version equals the read-set recorded version. *)
+<1>25f.
         \A j \in 1..Len(delivery_log[ag]) :
           delivery_log[ag][j].k # sh =>
             registry[delivery_log[ag][j].k].version = delivery_log[ag][j].v
@@ -983,29 +796,6 @@ THEOREM INDInductive == IND /\ [Next]_vars => IND'
 THEOREM SpecImpliesIND == Spec => []IND
   BY InitIND, INDInductive, PTL DEF Spec
 
-(* ====================================================================
-   (v13) ACTION-PRECONDITION THEOREM (renamed honestly for clarity)
-   ====================================================================
-
-   This theorem states that IF the Commit(ag, sh, ve, delta) action
-   fires, THEN the cross-shard freshness predicate held at that moment.
-   It is true by construction — the Commit action's enabling condition
-   literally contains NoStaleCrossShard(ag, sh) as a conjunct.
-
-   In earlier versions this was named `ORICommitSafety', which the
-   PaPoC-round reviewer correctly pointed out was misleading: the
-   theorem proves an action precondition (tautological given the
-   action's definition), not a state-invariant property quantifying
-   over reachable states.
-
-   The name change from `ORICommitSafety' to
-   `CommitEnablingConditionImpliesFreshness' reflects exactly what
-   is proved, no more.  The substantive safety property — that every
-   entry in the committed history is ORI-legal as a state invariant
-   on ALL reachable states — is captured separately by theorem
-   `CommittedHistoriesAreORILegalInvariant' below.
-   ==================================================================== *)
-
 THEOREM CommitEnablingConditionImpliesFreshness ==
   ASSUME NEW ag \in Agents, NEW sh \in Shards,
          NEW ve \in Nat,    NEW delta \in STRING,
@@ -1018,39 +808,12 @@ THEOREM CommitEnablingConditionImpliesFreshness ==
 <1>2. QED
   BY <1>1 DEF NoStaleCrossShard
 
-(* Backward-compatible alias so existing references in other modules
-   continue to type-check.  Do NOT cite this as a safety theorem in
-   the paper; cite CommittedHistoriesAreORILegalInvariant instead. *)
 THEOREM ORICommitSafety ==
   ASSUME NEW ag \in Agents, NEW sh \in Shards,
          NEW ve \in Nat,    NEW delta \in STRING,
          Commit(ag, sh, ve, delta)
   PROVE  NoStaleCrossShard(ag, sh)
   BY CommitEnablingConditionImpliesFreshness
-
-(* ====================================================================
-   (v13 NEW) TRACE-PROPERTY SAFETY THEOREM
-   ====================================================================
-
-   This is the theorem the PaPoC-round reviewer actually wanted.  It
-   states: in EVERY reachable state of the specification, for EVERY
-   entry ever added to committed_history, the stored read-set is
-   ORI-legal with respect to the cross-shard snapshot captured at
-   the moment the commit fired.
-
-   Unlike CommitEnablingConditionImpliesFreshness (an action-level
-   fact, trivially true given Commit's definition), this theorem
-   quantifies over reachable states via the inductive invariant IND.
-   It is a true trace property of the specification Spec, not an
-   action precondition.
-
-   Proof sketch: IND includes CommittedHistoriesAreORILegal as a
-   conjunct.  InitIND establishes IND in the initial state (where
-   committed_history is empty, so the invariant holds vacuously).
-   INDInductive establishes that every action of Next preserves IND.
-   Therefore Spec => []IND (SpecImpliesIND), which gives us
-   Spec => []CommittedHistoriesAreORILegal.
-   ==================================================================== *)
 
 THEOREM CommittedHistoriesAreORILegalInvariant ==
   Spec => []CommittedHistoriesAreORILegal
@@ -1062,10 +825,6 @@ THEOREM CommittedHistoriesAreORILegalInvariant ==
   BY <1>2, PTL
 <1>4. QED
   BY <1>1, <1>3, PTL
-
-(* ====================================================================
-   CommitValidation: the invariant form, retained for continuity.
-   ==================================================================== *)
 
 CommitValidation ==
   \A ag \in Agents, sh \in Shards :

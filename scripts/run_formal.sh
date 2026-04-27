@@ -1,74 +1,17 @@
 #!/usr/bin/env bash
-# run_formal.sh — Close all S-Bus formal-verification gaps in one invocation.
-#
-# Runs (in order):
-#   1. Dafny verification of proofs/sbus_lemmas.dfy     (~30s)
-#   2. tlapm mechanisation of proofs/SBus_TLAPS.tla    (~5-15min)
-#   3. TLC at N=3                                   (~10s)
-#   4. TLC at N=4 reduced                           (~10s)
-#   5. TLC at N=4 full                              (~1h18min on 16-worker,
-#                                                    ~2h on 8-worker,
-#                                                    ~7h on 4-worker)
-#
-# DEFAULT BEHAVIOUR:
-#   ./run_formal.sh
-#     - Steps 1-4 run foreground in this terminal (5-15 min total)
-#     - Step 5 (N=4 full TLC) auto-starts in the BACKGROUND with nohup,
-#       survives SSH disconnect, writes to results/tlc_tlc_n4_full.log
-#     - Terminal returns immediately after step 4
-#     - results/formal_results.json updates automatically when step 5 finishes
-#     - No manual intervention required.
-#
-#   This is what you almost certainly want for unattended runs.
-#
-# OTHER MODES:
-#   ./run_formal.sh --status        # Check status of any running background job
-#   ./run_formal.sh --wait          # Block until background TLC finishes, then re-analyse
-#   ./run_formal.sh --foreground    # Run all 5 steps sequentially, terminal blocks ~2h
-#   ./run_formal.sh --skip-tlc-full # Skip step 5 entirely
-#   ./run_formal.sh --proof-only    # Only Dafny+tlapm (steps 1-2)
-#   ./run_formal.sh --tlc-only      # Only TLC (steps 3-5)
-#
-# ENVIRONMENT OVERRIDES:
-#   TLC_WORKERS=8     # Number of TLC workers for step 5 (default 16)
-#   TLC_HEAP=8g       # JVM heap for TLC (default 8g)
-#   TLA_JAR=path      # Path to tla2tools.jar (default ./tla2tools.jar)
-#   DAFNY=path        # Path to dafny binary  (default `dafny`)
-#   TLAPM=path        # Path to tlapm binary  (default `tlapm`)
-#
-# Output:
-#   results/formal_results.json         — machine-readable summary
-#   results/dafny.log                   — Dafny output
-#   results/tlapm.log                   — tlapm output
-#   results/tlc_tlc_n3.log              — TLC N=3 output
-#   results/tlc_tlc_n4_reduced.log      — TLC N=4 reduced output
-#   results/tlc_tlc_n4_full.log         — TLC N=4 full output (background)
-#   results/tlc_n4_full.pid             — PID file for background TLC
-#
-# Tool requirements:
-#   - dafny (4.x)   — install: https://github.com/dafny-lang/dafny/releases
-#   - tlapm         — install: https://github.com/tlaplus/tlapm
-#   - java 11+      — install: apt install default-jdk
-#   - tla2tools.jar — https://github.com/tlaplus/tlaplus/releases
-#                     (or use the bundled one in this directory)
 
 set -uo pipefail
-
-# Always run from the repo root so relative paths work whether the user
-# invokes this as ./scripts/run_formal.sh, or cd scripts && ./run_formal.sh,
-# or via a symlink.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
-# Defaults
 SKIP_TLC_FULL=false
 TLC_ONLY=false
 PROOF_ONLY=false
-FOREGROUND=false       # if true, run N=4 full in foreground (blocks terminal)
-WAIT_MODE=false        # if true, wait for existing background job to finish
-STATUS_MODE=false      # if true, just print status of background job and exit
-FINALISE_MODE=false    # if true, status + patch JSON (internal: used as post-TLC hook)
+FOREGROUND=false
+WAIT_MODE=false
+STATUS_MODE=false
+FINALISE_MODE=false
 TLC_WORKERS=${TLC_WORKERS:-16}
 TLC_HEAP=${TLC_HEAP:-8g}
 TLA_JAR=${TLA_JAR:-tla2tools.jar}
@@ -101,11 +44,9 @@ RESULTS=results/formal_results.json
 PID_FILE=results/tlc_n4_full.pid
 STARTTS=$(date -u +%FT%TZ)
 
-# JSON accumulator
 declare -A J
 J[start]="$STARTTS"
 
-# ── helpers ───────────────────────────────────────────────────────────────────
 
 log()  { printf '\033[1;34m[%s]\033[0m %s\n' "$(date +%T)" "$*"; }
 ok()   { printf '\033[1;32m  PASS\033[0m %s\n' "$*"; }
@@ -120,15 +61,9 @@ require_tool() {
   return 0
 }
 
-# Extract first line matching a regex
 extract_first() { grep -m1 -oE "$1" "$2" 2>/dev/null || echo ""; }
 
-# ── Background-job status helpers ─────────────────────────────────────────────
-# Used by --status, --wait, and also when the main block re-analyses a
-# completed background run.
-
 bg_is_running() {
-  # Returns 0 if PID file exists AND process is alive.
   [[ -f "$PID_FILE" ]] || return 1
   local pid
   pid=$(cat "$PID_FILE" 2>/dev/null)
@@ -149,7 +84,7 @@ bg_print_status() {
     fi
     return 0
   fi
-  # Not running — check if it completed
+
   if [[ -f "$logf" ]]; then
     if grep -q 'Model checking completed. No error has been found.' "$logf"; then
       log "Background TLC N=4 full: COMPLETED — no errors"
@@ -172,7 +107,6 @@ bg_print_status() {
   return 1
 }
 
-# Analyse a completed background-TLC log and update formal_results.json.
 bg_analyse_and_update_json() {
   local logf="results/tlc_tlc_n4_full.log"
   [[ -f "$logf" ]] || return 1
@@ -197,7 +131,6 @@ bg_analyse_and_update_json() {
     status="partial"
   fi
 
-  # Patch the JSON in place with sed if it exists, else regenerate.
   if [[ -f "$RESULTS" ]]; then
     python3 -c "
 import json, sys
@@ -219,13 +152,11 @@ with open(p, 'w') as f:
   fi
 }
 
-# ── --status: print status and exit ───────────────────────────────────────────
 if [[ "$STATUS_MODE" == "true" ]]; then
   bg_print_status
   exit $?
 fi
 
-# ── --finalise: print status AND patch the JSON (post-TLC hook) ──────────────
 if [[ "$FINALISE_MODE" == "true" ]]; then
   bg_print_status
   RC=$?
@@ -233,7 +164,6 @@ if [[ "$FINALISE_MODE" == "true" ]]; then
   exit "$RC"
 fi
 
-# ── --wait: block until background job finishes, then analyse ────────────────
 if [[ "$WAIT_MODE" == "true" ]]; then
   if [[ ! -f "$PID_FILE" ]]; then
     fail "No background run to wait for ($PID_FILE does not exist)"
@@ -254,8 +184,6 @@ if [[ "$WAIT_MODE" == "true" ]]; then
   exit "$RC"
 fi
 
-# ── 1. Dafny verification ─────────────────────────────────────────────────────
-
 run_dafny() {
   log "STEP 1/5: Dafny verification of proofs/sbus_lemmas.dfy"
   if ! require_tool "$DAFNY" DAFNY; then
@@ -269,8 +197,7 @@ run_dafny() {
   fi
   "$DAFNY" verify proofs/sbus_lemmas.dfy > results/dafny.log 2>&1
   rc=$?
-  # Dafny's success line:
-  # "Dafny program verifier finished with N verified, 0 errors"
+
   line=$(extract_first 'Dafny program verifier finished with [0-9]+ verified, [0-9]+ errors' results/dafny.log)
   verified=$(echo "$line" | grep -oE '[0-9]+ verified' | grep -oE '[0-9]+')
   errors=$(echo   "$line" | grep -oE '[0-9]+ errors'   | grep -oE '[0-9]+')
@@ -286,8 +213,6 @@ run_dafny() {
     J[dafny_errors]="${errors:-unknown}"
   fi
 }
-
-# ── 2. tlapm mechanisation ────────────────────────────────────────────────────
 
 run_tlapm() {
   log "STEP 2/5: tlapm proof of proofs/SBus_TLAPS.tla"
@@ -306,10 +231,8 @@ run_tlapm() {
     "$TLAPM" proofs/SBus_TLAPS.tla > results/tlapm.log 2>&1
   fi
   rc=$?
-  # tlapm emits one of two summary patterns:
-  #   Success: "[INFO]: All N obligations proved."
-  #   Failure: "[ERROR]: K/N obligations failed."
-  # Try success pattern first.
+
+
   success_line=$(extract_first 'All [0-9]+ obligations proved' results/tlapm.log)
   if [[ -n "$success_line" ]]; then
     proved=$(echo "$success_line" | grep -oE '[0-9]+')
@@ -319,7 +242,7 @@ run_tlapm() {
     J[tlapm_failed]="0"
     return
   fi
-  # Fall back to failure pattern: "K/N obligations failed"
+
   fail_line=$(extract_first '[0-9]+/[0-9]+ obligations failed' results/tlapm.log)
   if [[ -n "$fail_line" ]]; then
     failed=$(echo "$fail_line" | grep -oE '^[0-9]+')
@@ -331,14 +254,13 @@ run_tlapm() {
     J[tlapm_failed]="$failed"
     return
   fi
-  # Neither pattern matched — likely a parser/tool crash.
+
   fail "tlapm produced no obligation summary (likely crashed) — see results/tlapm.log"
   J[tlapm_status]="fail"
   J[tlapm_proved]="0"
   J[tlapm_failed]="unknown"
 }
 
-# ── 3-5. TLC runs ─────────────────────────────────────────────────────────────
 
 run_tlc() {
   cfg="$1"; label="$2"
@@ -352,8 +274,7 @@ run_tlc() {
        -workers "$TLC_WORKERS" -config "$cfg" models/SBus_ori.tla \
        > "results/tlc_${label}.log" 2>&1
   rc=$?
-  # TLC summary line:
-  #   "X states generated, Y distinct states found, Z states left on queue."
+
   line=$(extract_first '[0-9,]+ states generated, [0-9,]+ distinct states found' \
                        "results/tlc_${label}.log")
   generated=$(echo "$line" | grep -oE '^[0-9,]+' | tr -d ',')
@@ -382,8 +303,6 @@ run_tlc() {
   J[${label}_violations]="${err:-0}"
 }
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-
 if [[ "$TLC_ONLY" == "true" ]]; then
   J[dafny_status]="skipped"
   J[tlapm_status]="skipped"
@@ -406,8 +325,6 @@ else
     log "STEP 5/5: TLC N=4 full (foreground; this takes ~1-2h)"
     run_tlc models/SBus_ori_N4.cfg tlc_n4_full 5
   else
-    # ── DEFAULT: launch N=4 full in the background ─────────────────────
-    # Check whether a background run is already active.
     if bg_is_running; then
       warn "STEP 5/5: A background TLC is already running (pid=$(cat $PID_FILE))"
       warn "          Use --status to check progress, --wait to block until done"
@@ -422,8 +339,7 @@ else
       log "  Workers:  $TLC_WORKERS"
       log "  Heap:     $TLC_HEAP"
       rm -f "$PID_FILE" results/tlc_tlc_n4_full.log
-      # The wrapper runs TLC, and on completion runs this script with --wait
-      # to update the JSON. Using setsid + nohup so it survives SSH disconnect.
+
       nohup bash -c "
         java -Xmx$TLC_HEAP -XX:+UseParallelGC -cp '$TLA_JAR' tlc2.TLC \
              -workers $TLC_WORKERS -config models/SBus_ori_N4.cfg models/SBus_ori.tla \
@@ -435,7 +351,7 @@ else
         exit \$RC
       " >/dev/null 2>&1 &
       BG_PID=$!
-      # Wait up to 10 seconds for java to start, then record its real pid.
+
       JAVA_PID=""
       for i in 1 2 3 4 5 6 7 8 9 10; do
         sleep 1
@@ -450,7 +366,7 @@ else
         log "  tail -f results/tlc_tlc_n4_full.log"
         J[tlc_n4_full_status]="running"
       else
-        # Java didn't start in 10s — likely failed. Fall back to bash wrapper.
+
         echo "$BG_PID" > "$PID_FILE"
         warn "Could not detect java pid after 10s; using bash wrapper pid=$BG_PID"
         warn "Check results/tlc_tlc_n4_full.log for startup errors."
@@ -463,7 +379,6 @@ fi
 ENDTS=$(date -u +%FT%TZ)
 J[end]="$ENDTS"
 
-# Emit JSON
 {
   echo "{"
   first=true
@@ -487,7 +402,6 @@ J[end]="$ENDTS"
 } > "$RESULTS"
 
 log "Results written to $RESULTS"
-log "===================="
 log "Summary:"
 [[ "${J[dafny_status]:-}" == "pass" ]] && ok "Dafny: ${J[dafny_verified]} verified, 0 errors"
 [[ "${J[tlapm_status]:-}" == "pass" ]] && ok "tlapm: ${J[tlapm_proved]} obligations proved, 0 failed"
@@ -502,7 +416,6 @@ if [[ "${J[tlc_n4_full_status]:-}" == "running" ]]; then
   log "Live tail:         tail -f results/tlc_tlc_n4_full.log"
 fi
 
-# Exit code: pass iff every non-skipped, non-running step is "pass" or "partial"
 fails=0
 for k in dafny_status tlapm_status tlc_n3_status tlc_n4_reduced_status tlc_n4_full_status; do
   s="${J[$k]:-}"
