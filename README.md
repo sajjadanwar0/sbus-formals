@@ -1,266 +1,299 @@
 # sbus-formals
 
-**TLA+, TLAPS, and Dafny mechanized-verification artifacts for the S-Bus paper.**
+**Mechanised proofs for the S-Bus paper.**
+
+This repository contains the formal-methods artifacts — TLA+ specifications,
+TLAPS proof scripts, and Dafny inductive lemmas — that support the safety
+claims of:
 
 > *S-Bus: Automatic Read-Set Reconstruction for Multi-Agent LLM State
-> Coordination.* Sajjad Khan, 2026. [arXiv link — TBA]
-
-This repository contains the formal evidence supporting the paper's
-§III–§V safety claims, across three independent verification tools:
-
-- **TLC** (model checking) — bounded exhaustive verification of the ORI
-  invariant at *N* ≤ 4 (211,696,712 distinct states at *N* = 4)
-- **TLAPS** (theorem proving) — mechanized proof of single-node ORI
-  safety for arbitrary agent count (687 obligations, 0 failed; modulo
-  one retained foundational typing axiom)
-- **Dafny 4** — 19 machine-checked inductive soundness lemmas on the
-  abstract algorithm
+> Coordination.* Sajjad Khan, 2026. _arXiv ID forthcoming._
 
 **Companion repositories:**
 
-- [`sbus`](https://github.com/sajjadanwar0/sbus) — the Rust
-  implementation (the measured system)
-- [`sbus-experiments`](https://github.com/sajjadanwar0/sbus-experiments)
-  — Python experimental harness
-- [`sbus-baselines`](https://github.com/sajjadanwar0/sbus-baselines) —
-  Rust-native PostgreSQL + Redis adapters for PG-Comparison
-- [`sbus-proxy`](https://github.com/sajjadanwar0/sbus-proxy) — LLM-API
-  proxy used in PROXY-PH2
+- [`sbus`](https://github.com/sajjadanwar0/sbus) — the Rust workspace
+  (`sbus-server`, `sbus-baselines`, `sbus-proxy`)
+- [`sbus-experiments`](https://github.com/sajjadanwar0/sbus-experiments) —
+  Python experimental harness
 
 ---
 
-## Repository structure
+## Scope of the formal evidence
+
+The mechanized proofs cover the **abstract algorithm's** safety properties.
+Refinement to the Rust implementation is empirical, not mechanized — this
+matches standard industry practice short of IronFleet (Hawblitzel et al.,
+SOSP 2015). Specifically:
+
+- **TLAPS** discharges `READSETSOUNDNESS` and `ORICOMMITSAFETY` for
+  arbitrary agent counts (687 obligations, 0 failed, modulo one retained
+  typing axiom — see [Limitations](#limitations) below).
+- **TLC** exhaustively explores the single-node state space at N=3
+  (20,763,484 distinct states, depth 28, 0 violations), a reduced
+  configuration at N=4 (2,811,301 distinct states, depth 24, 0
+  violations), and an abstract 3-node Raft model (247,249 distinct
+  states, 0 violations). A full N=4 exhaustive sweep is provided as
+  an opt-in run via `scripts/run_formal.sh` and is not part of the
+  v1 artifact (see [Limitations](#limitations)).
+- **Dafny** machine-checks 9 inductive soundness lemmas (19
+  verification obligations discharged, 0 errors) on types structurally
+  equivalent to the Rust implementation (parallel specification, not
+  refinement).
+
+| Tool | What is proved | Scope | Paper section |
+|---|---|---|---|
+| TLAPS | `ReadSetSoundness` + `ORICommitSafety` | Arbitrary N, 687 obligations, 1 axiom | §III-D, §V |
+| TLC (single-node) | Same invariants | N=3 exhaustive (20.8M states, depth 28); N=4 reduced (2.8M states, depth 24) | §III-D, §V |
+| TLC (distributed) | ORI safety under Raft abstraction | 3 nodes, 2 agents, 247K states | §III-D |
+| Dafny | 9 inductive soundness lemmas | 19 verification obligations, 0 errors | §III-D, §V |
+
+---
+
+## Repository layout
 
 ```
 sbus-formals/
-├── README.md
-├── LICENSE
-├── proofs/                    ← TLAPS + Dafny mechanised proofs
-│   ├── SBus_TLAPS.tla       (687 obligations, 0 failed; 1 axiom)
-│   └── sbus_lemmas.dfy       (19 lemmas + predicates, 0 errors)
-├── models/                    ← TLC model-checking models
-│   ├── SBus_ori.tla              (cross-shard ORI invariant)
-│   ├── SBus_ori_N3.cfg
-│   ├── SBus_ori_N4.cfg           (full N=4 check)
-│   ├── SBus_ori_N4_reduced.cfg   (symmetry-reduced N=4)
-│   ├── SBus_lean.tla             (ACP, no committed history)
+├── README.md                   this file
+├── LICENSE                     MIT
+├── tla2tools.jar               TLC + SANY (bundled for reproducibility)
+│
+├── proofs/                     TLAPS + Dafny mechanised proofs
+│   ├── SBus_TLAPS.tla          687 obligations, 0 failed, 1 retained axiom
+│   └── sbus_lemmas.dfy         9 lemmas, 19 verification obligations, 0 errors
+│
+├── models/                     TLC model-checking specifications
+│   ├── SBus_ori.tla            ORI invariant model (single-node)
+│   ├── SBus_ori_N3.cfg         N=3 exhaustive config
+│   ├── SBus_ori_N4.cfg         N=4 full config (opt-in; not in v1 artifact)
+│   ├── SBus_ori_N4_reduced.cfg N=4 reduced config (MaxVersion=2)
+│   ├── SBus_lean.tla           Companion lean ACP spec
 │   ├── SBus_lean_N3.cfg
 │   ├── SBus_lean_N4.cfg
-│   ├── SBus_Distributed.tla      (3-node abstract Raft)
-│   └── SBus_Distributed.cfg
-├── results/                   ← captured run outputs (verifier logs)
-│   ├── tlapm.log                  (TLAPS execution: 687/687 proved)
-│   ├── dafny.log                  (Dafny: 19 verified, 0 errors)
-│   ├── formal_results.json        (machine-readable summary)
-│   ├── tlc_tlc_n3.log             (TLC N=3 run)
-│   ├── tlc_tlc_n4_full.log        (TLC N=4 full)
-│   └── tlc_tlc_n4_reduced.log     (TLC N=4 reduced)
+│   ├── SBus_Distributed.tla    Abstract 3-node Raft model
+│   └── SBus_Distributed.cfg    Distributed-model TLC config
+│
+├── results/                    Machine-readable verification outputs
+│   ├── formal_results.json     Summary (statuses + counts)
+│   ├── dafny.log               Dafny verifier output
+│   ├── tlapm.log               TLAPS proof-manager output
+│   ├── tlc_tlc_n3.log          TLC N=3 exhaustive log
+│   ├── tlc_tlc_n4_reduced.log  TLC N=4 reduced log
+│   └── tlc_tlc_n4_full.log     TLC N=4 full log (in-progress / opt-in)
+│
 ├── scripts/
-│   └── run_formal.sh              (reproducibility driver)
-└── historical/                ← documented work-in-progress
-    ├── SBus_TLAPS_attempt_a.tla         (attempts FunTypingReconstruction discharge)
-    ├── SBus_TLAPS_attempt_b.tla         (further attempt — 22/702 still failing)
-    ├── tlapm_heavy_summary.txt
-    └── run_heavy_proof.sh
+│   └── run_formal.sh           One-shot reproducer for steps 1–5
+│
+└── historical/                 Earlier proof attempts (kept for provenance)
+    ├── SBus_TLAPS_attempt_a.tla
+    ├── SBus_TLAPS_attempt_b.tla
+    ├── run_heavy_proof.sh
+    └── tlapm_heavy_summary.txt
 ```
 
 ---
 
-## Paper claim → artifact mapping
+## Reproducing the verification
 
-### Paper §V Table III row: TLAPS proof
-
-| Paper cites | Artifact in this repo | Status |
-|---|---|---|
-| `SBus_TLAPS.tla`, 687 obligations, 0 failed, 1 retained axiom | `proofs/SBus_TLAPS.tla` | **Matches paper** |
-
-The proof mechanises two theorems for arbitrary *N*:
-
-- `ReadSetSoundness` — recorded-read monotonicity invariant. State
-  invariant: `∀a, i : dlog[a][i].v ≤ registry[dlog[a][i].k].v`.
-- `ORICommitSafety` — cross-shard equality at commit. Transition
-  property capturing Definition III.4(2):
-  `∀(k', v') ∈ dlog[α] : k' ≠ k ⇒ registry[k'].v = v'`.
-
-Two sequence-theoretic facts are discharged via the standard
-`SequenceTheorems` library (`SeqDef`, `ElementOfSeq`). Two parameter
-`ASSUME` declarations are retained on unspecified constants —
-standard TLA+ parameterisation, not mathematical axioms.
-
-**One AXIOM is retained:** `FunTypingReconstruction`, the converse of
-the typed-function-space introduction rule:
-> `DOMAIN f = S ∧ ∀x ∈ S : f[x] ∈ T  ⇒  f ∈ [S → T]`
-
-This is foundational to TLA+'s function-space construction and is
-widely treated as obvious in TLA+ practice, but is not present in the
-standard `FunctionTheorems.tla` library. Discharge via the Isabelle/TLA
-backend is queued as future work; see `historical/` for in-progress
-attempts.
-
-To verify locally:
-
-```bash
-cd proofs
-tlapm --toolbox 0 0 SBus_TLAPS.tla
-# Expected:  All 687 obligations proved.
-```
-
-`results/tlapm.log` contains the captured output from a prior verification
-run. The file paths inside the log record the cache directory layout used
-at capture time and may not match exactly when you re-run `tlapm` today —
-the workspace will write its own cache and produce a fresh log with current
-paths. Re-running `scripts/run_formal.sh` regenerates `tlapm.log`,
-`dafny.log`, and `formal_results.json` against the current artifacts.
-
-What matters in the captured log is the final line:
-
-```
-[INFO]: All 687 obligations proved.
-```
-
-### Paper §V: Dafny lemmas
-
-| Paper cites | Artifact in this repo | Status |
-|---|---|---|
-| `sbus_lemmas.dfy`, 19 verified | `proofs/sbus_lemmas.dfy` | **Matches paper** |
-
-The paper lists nine named lemmas plus helper predicates. Dafny
-reports `19 verified, 0 errors` — the count includes the lemmas, their
-helpers, and `EmptyLogSoundness`.
-
-To verify locally:
-
-```bash
-cd proofs
-dafny verify sbus_lemmas.dfy
-# Expected:  Dafny program verifier finished with 19 verified, 0 errors
-```
-
-### Paper §V + §VII: TLC model-checking
-
-| Paper cites | Artifact | Reported states | Status |
-|---|---|---|---|
-| `SBus_ori.tla`, 211,696,712 states at N=4 | `models/SBus_ori.tla` + `SBus_ori_N4.cfg` | 211 M (full N=4) | **Matches paper** |
-| `SBus_ori.tla`, 88,848 states at N=3 | `models/SBus_ori.tla` + `SBus_ori_N3.cfg` | 88,848 at N=3 | **Matches paper** |
-| `SBus_lean.tla` | `models/SBus_lean.tla` | (predecessor of `SBus_ori`) | **Historical** |
-| `SBus_Distributed.tla`, 247,249 states | `models/SBus_Distributed.tla` | 247 K | **Matches paper** |
-
-The headline N=4 number (211 M states, depth 32, fingerprint
-collision probability 4.6×10⁻⁷) came from a 16-worker parallel TLC run
-of about 1h 18min. `results/tlc_tlc_n4_full.log` contains the run
-output; `results/formal_results.json` contains a machine-readable
-summary.
-
-To reproduce N=3 (≈ 1 second):
-
-```bash
-cd models
-java -Xmx32G -jar tla2tools.jar -workers 16 -config SBus_ori_N3.cfg SBus_ori.tla
-```
-
-For the full N=4 run, allocate ~1h 18min on 16 workers and use
-`SBus_ori_N4.cfg`.
-
-### Paper §III-D: Distributed correctness (TLC abstract)
-
-`SBus_Distributed.tla` model-checks an abstract 3-node deployment with
-five state variables (`registry`, per-node `delivery_log`, `leader`,
-bounded `term`, per-agent `last_commit_fresh`) and four transitions
-(`ElectLeader`, `AgentGet`, `AgentCommit`, `AgentRecover`). At
-*Agents = {a1, a2}*, *Shards = {s1, s2}*, *Nodes = {n1, n2, n3}*,
-*MaxVersion = 3*, with symmetry reduction over agent and node
-permutations, TLC explores 247,249 distinct states to depth 28 with
-0 violations.
-
-A separate temporal property `FailoverGapExists` confirms that the
-model deliberately exposes the ~5ms concurrent-failover window of
-Limitation 11.
-
----
-
-## Quick verification (all three tools)
+The fastest path is the bundled driver script, which runs Dafny, TLAPS,
+and the two completed TLC configurations in sequence (~5–15 minutes
+total) and optionally launches the N=4 full sweep in the background:
 
 ```bash
 ./scripts/run_formal.sh
 ```
 
-The driver:
+By default this runs steps 1–4 in the foreground and starts step 5
+(N=4 full TLC) in the background under `nohup`. Use
+`--skip-tlc-full` to omit the background sweep entirely, or
+`--proof-only` to run only Dafny + TLAPS. See the script header for
+all flags.
 
-1. Runs `tlapm` on `proofs/SBus_TLAPS.tla` → expects 687/687 obligations
-2. Runs `dafny verify proofs/sbus_lemmas.dfy` → expects 19 verified, 0 errors
-3. Runs `tlc` on `models/SBus_ori.tla` with `SBus_ori_N3.cfg` → expects 0 violations
+If you'd rather invoke each tool directly:
 
-Machine-readable results are written to `results/formal_results.json`.
+### TLAPS proofs
 
-### Prerequisites
+Requires [TLAPS](https://proofs.tlapl.us/) (`tlapm 1.5` or later).
 
-| Tool | Version | Install |
-|---|---|---|
-| TLAPS | 1.5+ | <https://tla.msr-inria.inria.fr/tlaps/> |
-| TLC | 1.8+ | bundled in `tla2tools.jar`: <https://github.com/tlaplus/tlaplus/releases> |
-| Dafny | 4.0+ | `brew install dafny` or <https://github.com/dafny-lang/dafny> |
-| Java | 11+ | for TLC |
+```bash
+cd proofs
+tlapm SBus_TLAPS.tla
+```
+
+Expected: **687 / 687 obligations proved, 0 failed.** One `AXIOM`
+remains undischarged (`FunTypingReconstruction`); see
+[Limitations](#limitations).
+
+Wall time: approximately 8 minutes on a recent laptop. Most of the
+time is spent in the typed-function-space inductiveness lemma chain.
+Pre-computed output is in `results/tlapm.log`.
+
+### TLC model checking
+
+Requires Java 11+. The bundled `tla2tools.jar` is sufficient.
+
+**N=3 exhaustive (≈10 seconds):**
+
+```bash
+java -cp tla2tools.jar tlc2.TLC \
+    -workers auto \
+    -config models/SBus_ori_N3.cfg \
+    models/SBus_ori.tla
+```
+
+Expected: 20,763,484 distinct states explored to depth 28, zero
+invariant violations. Pre-computed output in `results/tlc_tlc_n3.log`.
+
+**N=4 reduced (≈42 seconds):**
+
+```bash
+java -cp tla2tools.jar tlc2.TLC \
+    -workers auto \
+    -config models/SBus_ori_N4_reduced.cfg \
+    models/SBus_ori.tla
+```
+
+Expected: 2,811,301 distinct states explored to depth 24, zero
+invariant violations. Pre-computed output in
+`results/tlc_tlc_n4_reduced.log`.
+
+**Distributed (3-node Raft abstraction):**
+
+```bash
+java -cp tla2tools.jar tlc2.TLC \
+    -workers auto \
+    -config models/SBus_Distributed.cfg \
+    models/SBus_Distributed.tla
+```
+
+Expected: 247,249 distinct states, depth 28, zero violations on
+`ORISAFETY`. The companion temporal property `FAILOVERGAPEXISTS`
+deliberately exposes the ~5 ms concurrent-failover window
+(Limitation 11 in the paper).
+
+**N=4 full (≈1h–7h depending on workers — opt-in):**
+
+```bash
+java -cp tla2tools.jar tlc2.TLC \
+    -workers 16 \
+    -config models/SBus_ori_N4.cfg \
+    models/SBus_ori.tla
+```
+
+This is the unbounded (`MaxVersion=3`) sweep. Wall time scales with
+worker count: roughly 1h 18m on 16 workers, 2h on 8 workers, 7h on 4
+workers. **Not part of the v1 artifact** — `results/tlc_tlc_n4_full.log`
+captures progress from a partial run that was checkpointed mid-search;
+`results/formal_results.json` flags this run as `"running"`. Reviewers
+who want the completed sweep should re-run this command and update
+the JSON. See [Limitations](#limitations).
+
+### Dafny lemmas
+
+Requires Dafny 4.0 or later.
+
+```bash
+dafny verify proofs/sbus_lemmas.dfy
+```
+
+Expected: **19 verified, 0 errors.** The 9 user-written lemmas are:
+`InitSoundness`, `EmptyLogSoundness`, `ReadPreservesSoundness`,
+`TimeoutPreservesSoundness`, `MonotonicCommitPreservesSoundness`,
+`CrossShardStalenessIsStrict`, `OwnershipInvariantInductive`,
+`VersionMonotonicityLemma`, `AcpLockOrderIsDeadlockFree`. Dafny
+discharges 19 verification obligations from these lemmas (each lemma
+generates well-formedness obligations alongside its main proof).
+Pre-computed output in `results/dafny.log`.
 
 ---
 
-## `historical/` — transparency about work-in-progress
+## What the proofs do and do not establish
 
-The retained `FunTypingReconstruction` axiom has been the subject of
-ongoing attempts to discharge it from the standard TLAPS library:
+**Established (by the artifacts in this repo):**
 
-- **v17** reformulates `FunTypingReconstruction` as a `THEOREM` with a
-  proof via `[x ∈ S |-> f[x]]` plus ZFC extensionality. Proof structure
-  complete; full verification incomplete at time of snapshot.
-- **v18** refines v17's extensionality step. Best recorded run closed
-  680/702 obligations (22 still failing — see
-  `historical/tlapm_heavy_summary.txt`). The failing obligations
-  cluster around the inductive invariant `IND`'s preservation step,
-  not around `FunTypingReconstruction` itself.
+- The S-Bus single-node algorithm preserves `READSETSOUNDNESS`
+  (recorded reads never advance ahead of committed versions) for
+  arbitrary N agents, conditional on the typed-function-space axiom
+  below.
+- The S-Bus algorithm satisfies `ORICOMMITSAFETY` (cross-shard
+  recorded reads match the registry's current versions at commit time)
+  for arbitrary N agents.
+- The state space at N=3 (exhaustive) and N=4 (reduced) contains no
+  violation of the type, ownership, version-monotonicity, or
+  read-set-soundness invariants.
+- Lock-acquisition order in the ACP is deadlock-free
+  (`AcpLockOrderIsDeadlockFree`, Dafny).
 
-These are documented here for transparency. The paper does **not**
-claim they verify. The paper's reported state is v16 (687 obligations,
-1 axiom).
+**Not established (and explicitly out of scope):**
 
-If you successfully close v18's remaining obligations or have insight
-on the `IND` preservation step, please open an issue or PR.
-
----
-
-## Why three tools?
-
-| Tool | Scope | Strengths | Limits |
-|---|---|---|---|
-| TLC | Bounded *N* ≤ 4 | Exhaustive; finds counterexamples | Scale-limited |
-| TLAPS | Arbitrary *N* | Proves for all *N* | Manual proof structure required |
-| Dafny | Inductive soundness of state transitions | Compiles; types match implementation | Not full protocol model |
-
-Together these cover (a) small-instance exhaustive validation (TLC),
-(b) arbitrary-*N* safety theorems (TLAPS), and (c) inductive
-state-invariant preservation (Dafny). The paper's §V discusses how
-each tier contributes.
+- **No refinement to the Rust implementation.** The Rust source is
+  not formally connected to the TLA+ or Dafny specifications. The
+  TLA+ spec is the ground truth for the abstract algorithm;
+  correspondence to the implementation is empirical (884K-attempt
+  zero-corruption evidence in the paper).
+- **No TLAPS-mechanised distributed safety proof.** The distributed
+  model is TLC-checked at one configuration but not TLAPS-proven.
+  Composition of the existing single-node TLAPS proof with a Raft
+  TLAPS proof is open work (Limitation 18 in the paper).
+- **No proof of semantic correctness.** The proofs cover *structural*
+  conflict prevention (Type-I, in the paper's taxonomy). Semantic
+  coherence between concurrent agent outputs is workload- and
+  backbone-conditional and is established empirically, not formally.
 
 ---
 
-## Known limitations
+## Limitations
 
-From the paper's §V and §VIII:
+### One retained mathematical axiom
 
-1. **Single-node safety only.** TLAPS proves single-node ACP.
-   Distributed (Raft) correctness is TLC-checked via
-   `SBus_Distributed.tla` (247K states) but not TLAPS-mechanised.
-   Full Raft-TLAPS estimated at 6–12 person-months (Limitation 18).
-2. **Dafny verifies abstract algorithm, not Rust implementation.**
-   The Dafny types are structurally equivalent to the Rust
-   implementation's, but this is parallel specification, not
-   refinement. Full Rust refinement via Creusot or Verus (with async
-   support for tokio) is future work (Limitation 19).
-3. **One retained AXIOM.** `FunTypingReconstruction` (see above).
-   Distinct from Verdi's network-model assumptions (about external
-   phenomena outside the formal system) and from IronFleet's
-   zero-axiom discipline (Limitation 17).
-4. **Two parameter ASSUMEs.** `NoOwnerNotAgent`,
-   `EmptyContentIsString` — standard TLA+ parameterisation, not
-   mathematical axioms.
+`SBus_TLAPS.tla` retains a single undischarged `AXIOM`:
+
+```tla
+AXIOM FunTypingReconstruction ==
+    \A f, S, T : (DOMAIN f = S /\ \A x \in S : f[x] \in T)
+                 => f \in [S -> T]
+```
+
+This is the converse of typed-function-space introduction — a
+foundational property of TLA+'s function-space construction that is
+widely treated as obvious in TLA+ practice but is not a derived
+theorem in the standard `FunctionTheorems.tla` library. Attempts to
+discharge it within `tlapm`'s default backend have not closed in the
+author's hands. The concrete next step is to attempt discharge via
+the Isabelle/TLA backend, which encodes a deeper layer of TLA+ set
+theory; this is open work.
+
+The retained axiom is the only undischarged mathematical fact in the
+proof. Two parameter `ASSUME`s on unspecified constants are also
+retained (`NOOWNER ∉ AGENTS`; initial shard content is a `STRING`),
+but these are standard TLA+ parameterisation rather than mathematical
+axioms.
+
+### Dafny is parallel specification, not refinement
+
+The Dafny types (`Shard`, `Delta`, `DeliveryEntry`) are structurally
+equivalent to the Rust types in the implementation, but there is no
+formal connection between the two. The Dafny lemmas verify that the
+*algorithm expressed in Dafny* preserves the soundness invariants;
+they do not verify that the Rust source code does. Full Rust
+refinement via [Verus](https://github.com/verus-lang/verus) or
+[Creusot](https://github.com/creusot-rs/creusot) is blocked on async
+support for tokio-based code and is open work.
+
+### TLC scope and the N=4 full sweep
+
+The completed TLC runs cover N=3 exhaustively (20.8M states) and N=4
+under a reduced configuration (`MaxVersion=2`, 2.8M states). A full
+N=4 sweep at `MaxVersion=3` is provided in `models/SBus_ori_N4.cfg`
+and the driver script supports running it as step 5 of
+`scripts/run_formal.sh`, but the v1 artifact ships with that run
+flagged as `"running"` in `results/formal_results.json` — the run
+was checkpointed mid-search rather than allowed to terminate, and
+`results/tlc_tlc_n4_full.log` captures the partial trace.
+
+This means the v1 paper's TLC claims rest on the two completed
+configurations (N=3 exhaustive + N=4 reduced) rather than on a
+completed N=4 full sweep. The TLAPS proof handles arbitrary N
+(modulo the axiom above) and does not depend on the TLC sweep.
 
 ---
 
@@ -273,11 +306,12 @@ From the paper's §V and §VIII:
                  LLM State Coordination},
   institution = {Independent},
   year        = {2026},
-  note        = {arXiv preprint},
-  url         = {https://arxiv.org/abs/...}
+  note        = {arXiv preprint}
 }
 ```
 
+---
+
 ## License
 
-MIT. See `LICENSE`.
+MIT. See `LICENSE` at the repo root.
