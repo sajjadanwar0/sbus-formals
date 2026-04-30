@@ -8,7 +8,7 @@ claims of:
 
 > *S-Bus: Automatic Read-Set Reconstruction for Multi-Agent LLM State
 > Coordination.* Sajjad Khan, 2026.
-> [📄 Paper PDF](./sbus.pdf) — _arXiv ID forthcoming._
+> [Paper PDF](./sbus.pdf) — _arXiv ID forthcoming._
 
 **Companion repositories:**
 
