@@ -304,9 +304,8 @@ completed N=4 full sweep. The TLAPS proof handles arbitrary N
   author      = {Khan, Sajjad},
   title       = {S-Bus: Automatic Read-Set Reconstruction for Multi-Agent
                  LLM State Coordination},
-  institution = {Independent},
   year        = {2026},
-  note        = {arXiv preprint}
+  note        = {waiting for arXiv endorsment...}
 }
 ```
 
