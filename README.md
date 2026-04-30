@@ -7,7 +7,8 @@ TLAPS proof scripts, and Dafny inductive lemmas — that support the safety
 claims of:
 
 > *S-Bus: Automatic Read-Set Reconstruction for Multi-Agent LLM State
-> Coordination.* Sajjad Khan, 2026. _arXiv ID forthcoming._
+> Coordination.* Sajjad Khan, 2026.
+> [📄 Paper PDF](./sbus.pdf) — _arXiv ID forthcoming._
 
 **Companion repositories:**
 
@@ -20,8 +21,8 @@ claims of:
 
 ## Scope of the formal evidence
 
-The mechanized proofs cover the **abstract algorithm's** safety properties.
-Refinement to the Rust implementation is empirical, not mechanized — this
+The mechanised proofs cover the **abstract algorithm's** safety properties.
+Refinement to the Rust implementation is empirical, not mechanised — this
 matches standard industry practice short of IronFleet (Hawblitzel et al.,
 SOSP 2015). Specifically:
 
@@ -55,6 +56,7 @@ SOSP 2015). Specifically:
 sbus-formals/
 ├── README.md                   this file
 ├── LICENSE                     MIT
+├── sbus.pdf                    paper PDF
 ├── tla2tools.jar               TLC + SANY (bundled for reproducibility)
 │
 ├── proofs/                     TLAPS + Dafny mechanised proofs
@@ -131,7 +133,7 @@ Pre-computed output is in `results/tlapm.log`.
 
 Requires Java 11+. The bundled `tla2tools.jar` is sufficient.
 
-**N=3 exhaustive (≈10 seconds):**
+**N=3 exhaustive (≈ 10 seconds):**
 
 ```bash
 java -cp tla2tools.jar tlc2.TLC \
@@ -143,7 +145,7 @@ java -cp tla2tools.jar tlc2.TLC \
 Expected: 20,763,484 distinct states explored to depth 28, zero
 invariant violations. Pre-computed output in `results/tlc_tlc_n3.log`.
 
-**N=4 reduced (≈42 seconds):**
+**N=4 reduced (≈ 42 seconds):**
 
 ```bash
 java -cp tla2tools.jar tlc2.TLC \
@@ -170,7 +172,7 @@ Expected: 247,249 distinct states, depth 28, zero violations on
 deliberately exposes the ~5 ms concurrent-failover window
 (Limitation 11 in the paper).
 
-**N=4 full (≈1h–7h depending on workers — opt-in):**
+**N=4 full (≈ 1h–7h depending on workers — opt-in):**
 
 ```bash
 java -cp tla2tools.jar tlc2.TLC \
@@ -257,10 +259,10 @@ This is the converse of typed-function-space introduction — a
 foundational property of TLA+'s function-space construction that is
 widely treated as obvious in TLA+ practice but is not a derived
 theorem in the standard `FunctionTheorems.tla` library. Attempts to
-discharge it within `tlapm`'s default backend have not closed in the
-author's hands. The concrete next step is to attempt discharge via
-the Isabelle/TLA backend, which encodes a deeper layer of TLA+ set
-theory; this is open work.
+discharge it within `tlapm`'s default backend have not closed. The
+concrete next step is to attempt discharge via the Isabelle/TLA
+backend, which encodes a deeper layer of TLA+ set theory; this is
+open work.
 
 The retained axiom is the only undischarged mathematical fact in the
 proof. Two parameter `ASSUME`s on unspecified constants are also
@@ -300,12 +302,13 @@ completed N=4 full sweep. The TLAPS proof handles arbitrary N
 ## Citation
 
 ```bibtex
-@techreport{khan2026sbus,
-  author      = {Khan, Sajjad},
-  title       = {S-Bus: Automatic Read-Set Reconstruction for Multi-Agent
-                 LLM State Coordination},
-  year        = {2026},
-  note        = {waiting for arXiv endorsment...}
+@misc{khan2026sbus,
+  author       = {Khan, Sajjad},
+  title        = {{S-Bus}: Automatic Read-Set Reconstruction for Multi-Agent
+                  {LLM} State Coordination},
+  year         = {2026},
+  note         = {Preprint},
+  howpublished = {\url{https://github.com/sajjadanwar0/sbus}}
 }
 ```
 
