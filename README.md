@@ -8,7 +8,7 @@ claims of:
 
 > *S-Bus: Automatic Read-Set Reconstruction for Multi-Agent LLM State
 > Coordination.* Sajjad Khan, 2026.
-> [Paper PDF](./sbus.pdf) — _arXiv ID forthcoming._
+> [Paper PDF](./sbus.pdf) — [arXiv:2605.17076](https://arxiv.org/abs/2605.17076) [cs.LG].
 
 **Companion repositories:**
 
@@ -266,7 +266,7 @@ open work.
 
 The retained axiom is the only undischarged mathematical fact in the
 proof. Two parameter `ASSUME`s on unspecified constants are also
-retained (`NOOWNER ∉ AGENTS`; initial shard content is a `STRING`),
+retained (`NOOWNER ∈ AGENTS`; initial shard content is a `STRING`),
 but these are standard TLA+ parameterisation rather than mathematical
 axioms.
 
@@ -303,12 +303,14 @@ completed N=4 full sweep. The TLAPS proof handles arbitrary N
 
 ```bibtex
 @misc{khan2026sbus,
-  author       = {Khan, Sajjad},
-  title        = {{S-Bus}: Automatic Read-Set Reconstruction for Multi-Agent
-                  {LLM} State Coordination},
-  year         = {2026},
-  note         = {Preprint},
-  howpublished = {\url{https://github.com/sajjadanwar0/sbus}}
+  author        = {Khan, Sajjad},
+  title         = {{S-Bus}: Automatic Read-Set Reconstruction for Multi-Agent
+                   {LLM} State Coordination},
+  year          = {2026},
+  eprint        = {2605.17076},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2605.17076}
 }
 ```
 
