@@ -8,7 +8,7 @@ claims of:
 
 > *S-Bus: Automatic Read-Set Reconstruction for Multi-Agent LLM State
 > Coordination.* Sajjad Khan, 2026.
-> [Paper PDF](./sbus.pdf) — [arXiv:2605.17076](https://arxiv.org/abs/2605.17076) [cs.LG].
+> [arXiv:2605.17076](https://arxiv.org/abs/2605.17076) [cs.LG].
 
 **Companion repositories:**
 
@@ -21,7 +21,7 @@ claims of:
 
 ## Scope of the formal evidence
 
-The mechanised proofs cover the **abstract algorithm's** safety properties.
+The mechanized proofs cover the **abstract algorithm's** safety properties.
 Refinement to the Rust implementation is empirical, not mechanised — this
 matches standard industry practice short of IronFleet (Hawblitzel et al.,
 SOSP 2015). Specifically:
@@ -55,10 +55,7 @@ SOSP 2015). Specifically:
 ```
 sbus-formals/
 ├── README.md                   this file
-├── LICENSE                     MIT
-├── sbus.pdf                    paper PDF
-├── tla2tools.jar               TLC + SANY (bundled for reproducibility)
-│
+├── LICENSE                     MIT│
 ├── proofs/                     TLAPS + Dafny mechanised proofs
 │   ├── SBus_TLAPS.tla          687 obligations, 0 failed, 1 retained axiom
 │   └── sbus_lemmas.dfy         9 lemmas, 19 verification obligations, 0 errors
