@@ -308,7 +308,7 @@ completed N=4 full sweep. The TLAPS proof handles arbitrary N
   archivePrefix = {arXiv},
   primaryClass  = {cs.LG},
   url           = {https://arxiv.org/abs/2605.17076},
-  note          = {Under review at The VLDB Journal}
+  note          = {Preprint}
 }
 ```
 
